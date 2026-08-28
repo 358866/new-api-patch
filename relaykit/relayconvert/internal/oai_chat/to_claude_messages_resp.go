@@ -303,9 +303,9 @@ func StreamResponseOpenAI2Claude(openAIResponse *dto.ChatCompletionsStreamRespon
 			oaiUsage := openAIResponse.Usage
 			if oaiUsage == nil {
 				oaiUsage = state.Usage
-				// Some upstreams emit finish_reason first, then send a final usage-only chunk.
-				// Defer closing until usage is available so the final message_delta carries it.
-				return claudeResponses
+				// 注意：不能在此处提前 return —— 部分上游（如 NVIDIA NIM）把正文 content
+				// 与 finish_reason 放在同一个 chunk，且不带 usage。提前返回会丢掉正文。
+				// usage 缺失时仅延迟/跳过 message_delta 的 usage，但正文与 message_stop 必须发出。
 			}
 		}
 

@@ -194,6 +194,14 @@ func HandleFinalResponse(c *gin.Context, info *relaycommon.RelayInfo, lastStream
 		for _, resp := range claudeResponses {
 			_ = helper.ClaudeData(c, *resp)
 		}
+		// 兜底：当最后一个 chunk 未触发终止事件（如部分上游把 finish_reason 和 usage 分开发送，
+		// 或 usage 缺失）时，补发 content_block_stop / message_delta / message_stop，
+		// 避免 Claude Code 等严格客户端因缺少 message_stop 而报 "Streaming response ended"。
+		if !info.ClaudeConvertInfo.Done {
+			for _, resp := range relayconvert.FinalizeClaudeStreamResponse(info) {
+				_ = helper.ClaudeData(c, *resp)
+			}
+		}
 		info.ClaudeConvertInfo.Done = true
 
 	case types.RelayFormatGemini:
